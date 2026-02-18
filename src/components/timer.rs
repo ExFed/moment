@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use chrono::{DateTime, TimeDelta, Utc};
 use dioxus::prelude::*;
 use gloo_timers::callback::Interval;
@@ -8,6 +10,12 @@ pub trait Clock {
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UtcClock;
+
+impl UtcClock {
+    pub fn new() -> Self {
+        Self
+    }
+}
 
 impl Clock for UtcClock {
     fn now(&self) -> DateTime<Utc> {
@@ -54,13 +62,17 @@ impl<C: Clock> Stopwatch<C> {
         }
     }
 
-    fn advance(&mut self, delta: TimeDelta) {
-        self.elapsed += delta;
+    fn lap(&mut self) -> TimeDelta {
+        let elapsed = self.elapsed();
+        self.elapsed = TimeDelta::zero();
+        if self.start.is_some() {
+            self.start = Some(self.clock.now());
+        }
+        elapsed
     }
 
-    fn reset(&mut self) {
-        self.elapsed = TimeDelta::zero();
-        self.start = None;
+    fn running(&self) -> bool {
+        self.start.is_some()
     }
 
     fn elapsed(&self) -> TimeDelta {
@@ -87,6 +99,25 @@ impl<C: Clock> Stopwatch<C> {
     }
 }
 
+impl Clone for Stopwatch<UtcClock> {
+    fn clone(&self) -> Self {
+        Self {
+            clock: UtcClock::new(),
+            start: self.start,
+            elapsed: self.elapsed,
+            total: self.total,
+        }
+    }
+}
+
+impl Display for Stopwatch<UtcClock> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let seconds = self.remaining().num_seconds().abs();
+        let minutes = seconds / 60;
+        write!(f, "{:02}:{:02}", minutes, seconds % 60)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, ops::AddAssign, rc::Rc};
@@ -98,12 +129,6 @@ mod tests {
     #[derive(Debug, Clone)]
     struct MockClock {
         now: Rc<RefCell<DateTime<Utc>>>,
-    }
-
-    impl MockClock {
-        fn advance(&self, delta: TimeDelta) {
-            *self.now.borrow_mut() += delta;
-        }
     }
 
     impl Clock for MockClock {
@@ -159,72 +184,27 @@ mod tests {
         assert_eq!(sw.remaining(), TimeDelta::seconds(-1));
         assert_eq!(sw.progress(), 1.0);
     }
-}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct TimerState {
-    millis_total: u32,
-    millis_elapsed: i32,
-    running: bool,
-}
-
-impl TimerState {
-    fn new(millis_total: u32) -> Self {
-        Self {
-            millis_total,
-            millis_elapsed: 0,
-            running: true,
-        }
-    }
-
-    fn tick(&mut self, millis_delta: i32) {
-        if self.running {
-            self.millis_elapsed += millis_delta;
-        }
-    }
-
-    fn reset(&mut self) {
-        self.millis_elapsed = 0;
-    }
-
-    fn toggle(&mut self) {
-        self.running = !self.running;
-    }
-
-    fn millis_remaining(&self) -> i32 {
-        self.millis_total as i32 - self.millis_elapsed
-    }
-
-    fn progress(&self) -> f32 {
-        if self.millis_elapsed >= self.millis_total as i32 {
-            1.0
-        } else if self.millis_elapsed <= 0 {
-            0.0
-        } else {
-            self.millis_elapsed as f32 / self.millis_total as f32
-        }
+    #[test]
+    fn test_stopwatch_display() {
+        todo!("Implement Display trait test for Stopwatch");
     }
 }
 
-fn fmt_millis(millis: i32) -> String {
-    let seconds = millis.abs() / 1000;
-    let minutes = seconds / 60;
-    format!("{:02}:{:02}", minutes, seconds % 60)
-}
-
-const TICK_MS: u32 = 100;
+const TICK_MS: u32 = 1000 / 15;
 
 #[component]
 pub fn Timer() -> Element {
-    let mut state = use_signal(move || TimerState::new(10_000));
+    let total = TimeDelta::seconds(10); // TODO: make configurable
+    let mut state = use_signal(move || Stopwatch::new(UtcClock::new(), total));
 
-    let current = *state.read();
-    let time_remain = fmt_millis(current.millis_remaining());
+    let current = state.read();
+    let time_remain = current.to_string();
     let progress = current.progress();
 
     use_effect(move || {
         let interval = Interval::new(TICK_MS, move || {
-            state.write().tick(TICK_MS as i32);
+            state.write().running(); // trigger re-render
         });
         interval.forget();
     });
@@ -248,11 +228,12 @@ pub fn Timer() -> Element {
             }
             div {
                 id: "timer-controls",
+                class: "columns-3 w-full",
                 button {
                     id: "timer-toggle",
-                    class: "bg-gray-700 text-white rounded w-[33%] h-15 m-1 text-[1.5em] font-bold hover:opacity-100 transition-opacity",
+                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| state.write().toggle(),
-                    if current.running {
+                    if current.running() {
                         "\u{23F8}"
                     } else {
                         "\u{23F5}"
@@ -260,14 +241,16 @@ pub fn Timer() -> Element {
                 }
                 button {
                     id: "timer-add30s",
-                    class: "bg-gray-700 text-white rounded w-[33%] h-15 m-1 text-[1.5em] font-bold hover:opacity-100 transition-opacity",
-                    onclick: move |_| state.write().tick(-30_000),
+                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    onclick: move |_| {
+                        // TODO: add 30 seconds to the total
+                    },
                     "+30s"
                 }
                 button {
                     id: "timer-next",
-                    class: "bg-gray-700 text-white rounded w-[33%] h-15 m-1 text-[1.5em] font-bold hover:opacity-100 transition-opacity",
-                    onclick: move |_| state.write().reset(),
+                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    onclick: move |_| { state.write().lap(); },
                     "\u{23ED}"
                 }
             }
