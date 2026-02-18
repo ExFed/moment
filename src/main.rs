@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
-use views::Home;
+use views::Lobby;
+use views::Play;
 
 /// Define a components module that contains all shared components for our app.
 mod components;
@@ -10,8 +11,10 @@ mod views;
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
-        #[route("/")]
-        Home {},
+    #[route("/")]
+    Lobby {},
+    #[route("/play")]
+    Play {},
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");

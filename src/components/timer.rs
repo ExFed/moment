@@ -33,12 +33,12 @@ struct Stopwatch<C: Clock> {
 }
 
 impl<C: Clock> Stopwatch<C> {
-    fn new(clock: C, total: TimeDelta) -> Self {
+    fn new(clock: C, limit: TimeDelta) -> Self {
         Self {
             clock,
             start: None,
             elapsed: TimeDelta::zero(),
-            limit: total,
+            limit,
             extension: TimeDelta::zero(),
         }
     }
@@ -250,16 +250,16 @@ const TICK_MS: u32 = 1000 / 25;
 
 #[component]
 pub fn Timer() -> Element {
-    let total = TimeDelta::seconds(10); // TODO: make configurable
-    let mut state = use_signal(move || Stopwatch::new(UtcClock::new(), total));
+    let initial = TimeDelta::seconds(90); // TODO: make configurable
+    let mut stopwatch = use_signal(move || Stopwatch::new(UtcClock::new(), initial));
 
-    let current = state.read();
+    let current = stopwatch.read();
     let time_remain = current.to_string();
     let progress = current.progress();
 
     use_effect(move || {
         let interval = Interval::new(TICK_MS, move || {
-            state.write().running(); // trigger re-render
+            stopwatch.write().running(); // trigger re-render
         });
         interval.forget();
     });
@@ -272,7 +272,7 @@ pub fn Timer() -> Element {
                 class: "relative w-full bg-gray-800 h-15 m-1 overflow-hidden rounded",
                 div {
                     id: "timer-fill",
-                    class: "h-full bg-gradient-to-b from-blue-400 via-blue-600 to-slate-800",
+                    class: "h-full bg-gradient-to-b from-blue-400 via-blue-600 to-slate-800", // TODO: visual feedback when time is up
                     style: "width: {progress * 100f32}%",
                 }
                 span {
@@ -287,7 +287,7 @@ pub fn Timer() -> Element {
                 button {
                     id: "timer-toggle",
                     class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
-                    onclick: move |_| state.write().toggle(),
+                    onclick: move |_| stopwatch.write().toggle(),
                     if current.running() {
                         "\u{23F8}"
                     } else {
@@ -298,14 +298,14 @@ pub fn Timer() -> Element {
                     id: "timer-add30s",
                     class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| {
-                        state.write().add_assign(TimeDelta::seconds(30));
+                        stopwatch.write().add_assign(TimeDelta::seconds(30));
                     },
                     "+30s"
                 }
                 button {
                     id: "timer-next",
                     class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
-                    onclick: move |_| { state.write().lap(); },
+                    onclick: move |_| { stopwatch.write().lap(); },
                     "\u{23ED}"
                 }
             }

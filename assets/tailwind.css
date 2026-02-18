@@ -200,6 +200,9 @@
   .flex {
     display: flex;
   }
+  .table {
+    display: table;
+  }
   .h-15 {
     height: calc(var(--spacing) * 15);
   }

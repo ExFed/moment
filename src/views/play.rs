@@ -2,7 +2,7 @@ use crate::components::Timer;
 use dioxus::prelude::*;
 
 #[component]
-pub fn Home() -> Element {
+pub fn Play() -> Element {
     rsx! {
         Timer {}
     }
