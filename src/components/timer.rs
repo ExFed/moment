@@ -28,7 +28,8 @@ struct Stopwatch<C: Clock> {
     clock: C,
     start: Option<DateTime<Utc>>,
     elapsed: TimeDelta,
-    total: TimeDelta,
+    limit: TimeDelta,
+    extension: TimeDelta,
 }
 
 impl<C: Clock> Stopwatch<C> {
@@ -37,7 +38,8 @@ impl<C: Clock> Stopwatch<C> {
             clock,
             start: None,
             elapsed: TimeDelta::zero(),
-            total,
+            limit: total,
+            extension: TimeDelta::zero(),
         }
     }
 
@@ -65,10 +67,19 @@ impl<C: Clock> Stopwatch<C> {
     fn lap(&mut self) -> TimeDelta {
         let elapsed = self.elapsed();
         self.elapsed = TimeDelta::zero();
+        self.extension = TimeDelta::zero();
         if self.start.is_some() {
             self.start = Some(self.clock.now());
         }
         elapsed
+    }
+
+    fn extend_time(&mut self, delta: TimeDelta) {
+        self.extension += delta;
+    }
+
+    fn total(&self) -> TimeDelta {
+        self.limit + self.extension
     }
 
     fn running(&self) -> bool {
@@ -84,17 +95,17 @@ impl<C: Clock> Stopwatch<C> {
     }
 
     fn remaining(&self) -> TimeDelta {
-        self.total - self.elapsed()
+        self.total() - self.elapsed()
     }
 
     fn progress(&self) -> f32 {
         let elapsed = self.elapsed();
-        if elapsed >= self.total {
+        if elapsed >= self.total() {
             1.0
         } else if elapsed <= TimeDelta::zero() {
             0.0
         } else {
-            elapsed.as_seconds_f32() / self.total.as_seconds_f32()
+            elapsed.as_seconds_f32() / self.total().as_seconds_f32()
         }
     }
 }
@@ -105,7 +116,8 @@ impl Clone for Stopwatch<UtcClock> {
             clock: UtcClock::new(),
             start: self.start,
             elapsed: self.elapsed,
-            total: self.total,
+            limit: self.limit,
+            extension: self.extension,
         }
     }
 }
@@ -120,7 +132,7 @@ impl<C: Clock> Display for Stopwatch<C> {
 
 impl<C: Clock> AddAssign<TimeDelta> for Stopwatch<C> {
     fn add_assign(&mut self, delta: TimeDelta) {
-        self.total += delta;
+        self.extend_time(delta);
     }
 }
 
@@ -286,7 +298,7 @@ pub fn Timer() -> Element {
                     id: "timer-add30s",
                     class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| {
-                        // TODO: add 30 seconds to the total
+                        state.write().add_assign(TimeDelta::seconds(30));
                     },
                     "+30s"
                 }
