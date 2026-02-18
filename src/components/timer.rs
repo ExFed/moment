@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::AddAssign};
 
 use chrono::{DateTime, TimeDelta, Utc};
 use dioxus::prelude::*;
@@ -110,11 +110,17 @@ impl Clone for Stopwatch<UtcClock> {
     }
 }
 
-impl Display for Stopwatch<UtcClock> {
+impl<C: Clock> Display for Stopwatch<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let seconds = self.remaining().num_seconds().abs();
         let minutes = seconds / 60;
         write!(f, "{:02}:{:02}", minutes, seconds % 60)
+    }
+}
+
+impl<C: Clock> AddAssign<TimeDelta> for Stopwatch<C> {
+    fn add_assign(&mut self, delta: TimeDelta) {
+        self.total += delta;
     }
 }
 
@@ -131,6 +137,14 @@ mod tests {
         now: Rc<RefCell<DateTime<Utc>>>,
     }
 
+    impl MockClock {
+        pub fn new(secs: i64, nsecs: u32) -> Self {
+            Self {
+                now: Rc::new(RefCell::new(Utc.timestamp_opt(secs, nsecs).unwrap())),
+            }
+        }
+    }
+
     impl Clock for MockClock {
         fn now(&self) -> DateTime<Utc> {
             *self.now.borrow()
@@ -145,15 +159,13 @@ mod tests {
 
     #[test]
     fn test_stopwatch_progress() {
-        let mut clock = MockClock {
-            now: Rc::new(RefCell::new(Utc.timestamp_opt(0, 0).unwrap())),
-        };
+        let mut clock = MockClock::new(0, 0);
 
         let mut sw = Stopwatch::new(clock.clone(), TimeDelta::seconds(2));
         assert_eq!(sw.remaining(), TimeDelta::seconds(2));
         assert_eq!(sw.progress(), 0.0);
 
-        // advance time without starting the stopwatch should not change remaining or progress
+        // time advancing without starting the stopwatch should not change remaining or progress
         clock += TimeDelta::seconds(1);
         assert_eq!(sw.remaining(), TimeDelta::seconds(2));
         assert_eq!(sw.progress(), 0.0);
@@ -161,17 +173,17 @@ mod tests {
         // start the stopwatch and check that it counts down
         sw.start();
 
-        // advance time by a second while running
+        // time advancing while running should decrease remaining and increase progress
         clock += TimeDelta::seconds(1);
         assert_eq!(sw.remaining(), TimeDelta::seconds(1));
         assert_eq!(sw.progress(), 0.5);
 
-        // advance time by another second while running
+        // time advancing while running should decrease remaining and increase progress
         clock += TimeDelta::seconds(1);
         assert_eq!(sw.remaining(), TimeDelta::zero());
         assert_eq!(sw.progress(), 1.0);
 
-        // advance time by a second after reaching the end
+        // time advancing after reaching the end should change remaining but not progress (max progress is 1.0)
         clock += TimeDelta::seconds(1);
         assert_eq!(sw.remaining(), TimeDelta::seconds(-1));
         assert_eq!(sw.progress(), 1.0);
@@ -179,7 +191,7 @@ mod tests {
         // stop the stopwatch and check that it stops counting down
         sw.stop();
 
-        // advance time by a second while stopped
+        // time advancing while stopped
         clock += TimeDelta::seconds(1);
         assert_eq!(sw.remaining(), TimeDelta::seconds(-1));
         assert_eq!(sw.progress(), 1.0);
@@ -187,11 +199,42 @@ mod tests {
 
     #[test]
     fn test_stopwatch_display() {
-        todo!("Implement Display trait test for Stopwatch");
+        //todo: Implement Display trait test for Stopwatch
+
+        let clock = MockClock::new(0, 0);
+
+        let sw0 = Stopwatch::new(clock.clone(), TimeDelta::seconds(0));
+        assert_eq!(sw0.to_string(), "00:00");
+
+        let sw90 = Stopwatch::new(clock.clone(), TimeDelta::seconds(90));
+        assert_eq!(sw90.to_string(), "01:30");
+
+        let sw150 = Stopwatch::new(clock.clone(), TimeDelta::seconds(150));
+        assert_eq!(sw150.to_string(), "02:30");
+
+        let sw5999 = Stopwatch::new(clock.clone(), TimeDelta::seconds(5999));
+        assert_eq!(sw5999.to_string(), "99:59");
+
+        let sw7425 = Stopwatch::new(clock.clone(), TimeDelta::seconds(7425));
+        assert_eq!(sw7425.to_string(), "123:45");
+    }
+
+    #[test]
+    fn test_add_time() {
+        let clock = MockClock::new(0, 0);
+
+        let mut sw = Stopwatch::new(clock.clone(), TimeDelta::seconds(2));
+        assert_eq!(sw.remaining(), TimeDelta::seconds(2));
+
+        sw += TimeDelta::seconds(1);
+        assert_eq!(sw.remaining(), TimeDelta::seconds(3));
+
+        sw += TimeDelta::seconds(-2);
+        assert_eq!(sw.remaining(), TimeDelta::seconds(1));
     }
 }
 
-const TICK_MS: u32 = 1000 / 15;
+const TICK_MS: u32 = 1000 / 25;
 
 #[component]
 pub fn Timer() -> Element {
@@ -231,7 +274,7 @@ pub fn Timer() -> Element {
                 class: "columns-3 w-full",
                 button {
                     id: "timer-toggle",
-                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| state.write().toggle(),
                     if current.running() {
                         "\u{23F8}"
@@ -241,7 +284,7 @@ pub fn Timer() -> Element {
                 }
                 button {
                     id: "timer-add30s",
-                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| {
                         // TODO: add 30 seconds to the total
                     },
@@ -249,7 +292,7 @@ pub fn Timer() -> Element {
                 }
                 button {
                     id: "timer-next",
-                    class: "bg-gray-700 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
                     onclick: move |_| { state.write().lap(); },
                     "\u{23ED}"
                 }
