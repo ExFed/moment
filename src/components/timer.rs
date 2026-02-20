@@ -249,8 +249,9 @@ mod tests {
 const TICK_MS: u32 = 1000 / 25;
 
 #[component]
-pub fn Timer() -> Element {
-    let initial = TimeDelta::seconds(90); // TODO: make configurable
+pub fn Timer(time_limit: Option<u32>) -> Element {
+    let initial_seconds = time_limit.unwrap_or(90);
+    let initial = TimeDelta::seconds(initial_seconds as i64); // TODO: make configurable
     let mut stopwatch = use_signal(move || Stopwatch::new(UtcClock::new(), initial));
 
     let current = stopwatch.read();

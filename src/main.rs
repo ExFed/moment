@@ -1,5 +1,3 @@
-use std::env::var;
-
 use dioxus::prelude::*;
 use views::Lobby;
 use views::Play;
@@ -13,18 +11,34 @@ mod views;
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
-    #[route("/")]
-    Lobby {},
-    #[route("/play")]
-    Play {},
+    #[layout(PageLayout)]
+        #[route("/")]
+        Lobby {},
+        #[route("/play?:time_limit")]
+        Play { time_limit: Option<u32> },
+}
+
+#[component]
+fn PageLayout() -> Element {
+    rsx! {
+        div {
+            class: "min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100",
+            div {
+                class: "flex-grow flex w-full max-w-4xl p-4 flex-col",
+                Outlet::<Route> {}
+            }
+            footer {
+                class: "w-full text-center text-xs text-slate-600 p-2",
+                span { "v{DESCRIBE_VERSION}" }
+            }
+        }
+    }
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
-const COMMIT_HASH: &str = env!("COMMIT_HASH");
-const COMMIT_DATE: &str = env!("COMMIT_DATE");
 const DESCRIBE_VERSION: &str = env!("DESCRIBE_VERSION");
 
 fn main() {
