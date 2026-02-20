@@ -1,3 +1,5 @@
+use std::env::var;
+
 use dioxus::prelude::*;
 use views::Lobby;
 use views::Play;
@@ -20,6 +22,10 @@ enum Route {
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+
+const COMMIT_HASH: &str = env!("COMMIT_HASH");
+const COMMIT_DATE: &str = env!("COMMIT_DATE");
+const DESCRIBE_VERSION: &str = env!("DESCRIBE_VERSION");
 
 fn main() {
     dioxus::launch(App);
