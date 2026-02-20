@@ -16,12 +16,10 @@ pub fn Table() -> Element {
     let mut new_item_text = use_signal(String::new);
 
     rsx! {
-        div {
-            class: "w-full flex flex-col space-y-2 mt-8",
+        div { class: "w-full flex flex-col space-y-2 mt-8",
             h2 { class: "text-2xl font-bold", "Table" }
-            div {
-                class: "w-full border border-slate-700 rounded-lg p-4 bg-slate-800",
-                for (index, item) in items.read().clone().into_iter().enumerate() {
+            div { class: "w-full border border-slate-700 rounded-lg p-4 bg-slate-800",
+                for (index , item) in items.read().clone().into_iter().enumerate() {
                     div {
                         key: "{item.id}",
                         class: "flex items-center space-x-2 py-2 border-b border-slate-700 last:border-b-0 group",
@@ -39,8 +37,7 @@ pub fn Table() -> Element {
                             }
                             drag_source.set(None);
                         },
-                        div {
-                            class: "cursor-move text-slate-500 hover:text-white px-2",
+                        div { class: "cursor-move text-slate-500 hover:text-white px-2",
                             "\u{2630}"
                         }
                         input {
@@ -51,7 +48,7 @@ pub fn Table() -> Element {
                                 if let Some(i) = items.write().iter_mut().find(|i| i.id == item.id) {
                                     i.completed = e.value().parse().unwrap_or(false);
                                 }
-                            }
+                            },
                         }
                         if Some(item.id) == *editing_id.read() {
                             input {
@@ -62,7 +59,11 @@ pub fn Table() -> Element {
                                 onkeydown: move |e| {
                                     match e.key() {
                                         Key::Enter => {
-                                            let should_remove = items.read().iter().find(|i| i.id == item.id).is_some_and(|i| i.description.trim().is_empty());
+                                            let should_remove = items
+                                                .read()
+                                                .iter()
+                                                .find(|i| i.id == item.id)
+                                                .is_some_and(|i| i.description.trim().is_empty());
                                             if should_remove {
                                                 items.write().retain(|x| x.id != item.id);
                                             }
@@ -80,12 +81,16 @@ pub fn Table() -> Element {
                                     }
                                 },
                                 onblur: move |_| {
-                                    let should_remove = items.read().iter().find(|i| i.id == item.id).is_some_and(|i| i.description.trim().is_empty());
+                                    let should_remove = items
+                                        .read()
+                                        .iter()
+                                        .find(|i| i.id == item.id)
+                                        .is_some_and(|i| i.description.trim().is_empty());
                                     if should_remove {
                                         items.write().retain(|x| x.id != item.id);
                                     }
                                     editing_id.set(None);
-                                }
+                                },
                             }
                         } else {
                             span {
@@ -102,10 +107,7 @@ pub fn Table() -> Element {
                     }
                 }
 
-                div {
-                    class: "flex items-center space-x-2 py-2",
-                    div { class: "w-8" }
-                    div { class: "h-5 w-5" }
+                div { class: "flex items-center space-x-2 py-2",
                     input {
                         class: "flex-grow bg-slate-700 text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500",
                         r#type: "text",
@@ -118,17 +120,18 @@ pub fn Table() -> Element {
                                 if !val.trim().is_empty() {
                                     let id = *next_id.read();
                                     *next_id.write() += 1;
-                                    items.write().push(TableItem {
-                                        id,
-                                        description: val.trim().to_string(),
-                                        completed: false,
-                                    });
+                                    items
+                                        .write()
+                                        .push(TableItem {
+                                            id,
+                                            description: val.trim().to_string(),
+                                            completed: false,
+                                        });
                                     new_item_text.set(String::new());
                                 }
                             }
-                        }
+                        },
                     }
-                    div { class: "w-8" }
                 }
             }
         }

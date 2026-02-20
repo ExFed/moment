@@ -266,28 +266,20 @@ pub fn Timer(time_limit: Option<u32>) -> Element {
     });
 
     rsx! {
-        div {
-            id: "timer-container",
-            div {
-                id: "timer",
-                class: "relative w-full bg-gray-800 h-15 m-1 overflow-hidden rounded",
+        div { class: "flex flex-col space-y-2 mt-8 w-full max-w-2xl mx-auto",
+            h2 { class: "text-2xl font-bold", "Timer" }
+            div { class: "relative w-full bg-gray-800 h-15 m-1 overflow-hidden rounded",
                 div {
-                    id: "timer-fill",
                     class: "h-full bg-gradient-to-b from-blue-400 via-blue-600 to-slate-800", // TODO: visual feedback when time is up
                     style: "width: {progress * 100f32}%",
                 }
-                span {
-                    id: "timer-text",
-                    class: "absolute inset-0 flex items-center justify-center text-[1.5em] font-bold text-shadow-md/50",
+                span { class: "absolute inset-0 flex items-center justify-center text-2xl font-bold text-shadow-md/50",
                     "{time_remain}"
                 }
             }
-            div {
-                id: "timer-controls",
-                class: "columns-3 w-full",
+            div { class: "columns-3 w-full",
                 button {
-                    id: "timer-toggle",
-                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-2xl font-bold",
                     onclick: move |_| stopwatch.write().toggle(),
                     if current.running() {
                         "\u{23F8}"
@@ -296,17 +288,17 @@ pub fn Timer(time_limit: Option<u32>) -> Element {
                     }
                 }
                 button {
-                    id: "timer-add30s",
-                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-2xl font-bold",
                     onclick: move |_| {
                         stopwatch.write().add_assign(TimeDelta::seconds(30));
                     },
                     "+30s"
                 }
                 button {
-                    id: "timer-next",
-                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-[1.5em] font-bold",
-                    onclick: move |_| { stopwatch.write().lap(); },
+                    class: "bg-gray-700 hover:bg-gray-600 w-full text-white rounded h-15 m-1 text-2xl font-bold",
+                    onclick: move |_| {
+                        stopwatch.write().lap();
+                    },
                     "\u{23ED}"
                 }
             }

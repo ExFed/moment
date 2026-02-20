@@ -21,15 +21,10 @@ enum Route {
 #[component]
 fn PageLayout() -> Element {
     rsx! {
-        div {
-            class: "min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100",
-            div {
-                class: "flex-grow flex w-full max-w-4xl p-4 flex-col",
-                Outlet::<Route> {}
-            }
-            footer {
-                class: "w-full text-center text-xs text-slate-600 p-2",
-                span { "v{DESCRIBE_VERSION}" }
+        div { class: "min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100",
+            div { class: "flex-grow flex w-full max-w-4xl p-4 flex-col", Outlet::<Route> {} }
+            footer { class: "w-full text-center text-xs text-slate-600 p-2",
+                span { "{DESCRIBE_VERSION}" }
             }
         }
     }
